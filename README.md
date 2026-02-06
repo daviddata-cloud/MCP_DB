@@ -71,3 +71,175 @@ Metadata lines are parsed as `key: value`. If a line is not `key: value`, it is 
 - Everything here is standard-library Python (SQLite + CSV).
 - The demo data is synthetic (no real PII).
 - The server writes **only JSON-RPC** to stdout. Logs go to stderr (safe for stdio MCP).
+  
+## Samples
+```
+-Terminal 1
+
+C:\Users\davidzhang\Downloads\ml\ml\db_mcp_1>python mcp_server.py data/hr_people.csv
+[db_mcp_server] Ready. Loaded data/hr_people.csv. Tools: 4
+
+
+-Terminal 2
+ C:\Users\davidzhang\Downloads\ml\ml\db_mcp_1>python client.py --csv ./data/hr_people.csv
+[db_mcp_server] Ready. Loaded ./data/hr_people.csv. Tools: 4
+[db_mcp_server] Internal error:
+Traceback (most recent call last):
+  File "C:\Users\davidzhang\Downloads\ml\ml\db_mcp_1\db_mcp_server.py", line 537, in main
+    server.handle(msg)
+  File "C:\Users\davidzhang\Downloads\ml\ml\db_mcp_1\db_mcp_server.py", line 493, in handle
+    self.handle_initialize(id_value, params)
+  File "C:\Users\davidzhang\Downloads\ml\ml\db_mcp_1\db_mcp_server.py", line 438, in handle_initialize
+Initialize response:
+{
+  "jsonrpc": "2.0",
+  "error": {
+    "code": -32603,
+    "message": "Internal error"
+  },
+  "id": 1
+}
+    _send(resp)
+
+Tools:
+  File "C:\Users\davidzhang\Downloads\ml\ml\db_mcp_1\db_mcp_server.py", line 45, in _send
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "tools": [
+      {
+        "name": "hr_metadata",
+        "title": "HR dataset metadata",
+        "description": "Return the 3-line metadata header read from the HR CSV file.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object"
+        }
+      },
+      {
+        "name": "hr_schema",
+        "title": "HR table schema",
+        "description": "Return SQLite schema information for the employees table.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object"
+        }
+      },
+      {
+        "name": "hr_query",
+        "title": "Run a read-only SQL query",
+        "description": "Execute a read-only SQL query (SELECT/WITH only) against the in-memory SQLite database.\nTable name: employees\nExample: SELECT department, COUNT(*) AS n FROM employees GROUP BY department",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "sql": {
+              "type": "string",
+              "description": "A SELECT/WITH SQL query to run."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "description": "Optional row limit (wraps the query)."
+            }
+          },
+          "required": [
+            "sql"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "rowCount": {
+              "type": "integer"
+            },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "rowCount",
+            "rows"
+          ]
+        }
+      },
+      {
+        "name": "hr_find_people",
+        "title": "Find employees (structured filters)",
+        "description": "Find employees by common HR filters without writing SQL.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name_contains": {
+              "type": "string",
+              "description": "Substring match against first or last name (case-insensitive)."
+            },
+            "department": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "min_salary": {
+              "type": "number"
+            },
+            "max_salary": {
+              "type": "number"
+            },
+            "hired_after": {
+              "type": "string",
+              "description": "YYYY-MM-DD"
+            },
+            "hired_before": {
+              "type": "string",
+              "description": "YYYY-MM-DD"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 25
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "rowCount": {
+              "type": "integer"
+            },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "appliedFilters": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "rowCount",
+            "rows",
+            "appliedFilters"
+          ]
+        }
+      }
+  }
+}
+
